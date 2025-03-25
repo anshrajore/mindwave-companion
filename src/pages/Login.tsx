@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -7,8 +7,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Sparkles, LogIn } from 'lucide-react';
+import { Sparkles, LogIn, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -21,6 +22,18 @@ const Login = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
 
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        navigate('/dashboard');
+      }
+    };
+    
+    checkSession();
+  }, [navigate]);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -29,20 +42,25 @@ const Login = () => {
     },
   });
 
-  const onSubmit = (data: FormValues) => {
+  const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
-    // In a real app, you would connect this to your auth provider
-    console.log("Login attempt with:", data);
     
-    setTimeout(() => {
-      // Simulate successful login for demo purposes
-      localStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('userEmail', data.email);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      });
+      
+      if (error) throw error;
       
       toast.success("Login successful!");
-      setIsLoading(false);
       navigate('/dashboard');
-    }, 1500);
+    } catch (error: any) {
+      console.error("Login error:", error);
+      toast.error(error.message || "Failed to sign in");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -114,8 +132,11 @@ const Login = () => {
                   className="w-full flex items-center justify-center gap-2"
                   disabled={isLoading}
                 >
-                  {isLoading ? "Signing in..." : "Sign in"}
-                  <LogIn className="h-4 w-4" />
+                  {isLoading ? (
+                    <>Signing in... <AlertCircle className="h-4 w-4 animate-spin" /></>
+                  ) : (
+                    <>Sign in <LogIn className="h-4 w-4" /></>
+                  )}
                 </Button>
               </form>
             </Form>

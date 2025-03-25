@@ -9,7 +9,192 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      chat_history: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          sender: string
+          sentiment_score: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          sender: string
+          sentiment_score?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          sender?: string
+          sentiment_score?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      emergency_contacts: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          is_primary: boolean | null
+          name: string
+          phone: string
+          relationship: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_primary?: boolean | null
+          name: string
+          phone: string
+          relationship: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_primary?: boolean | null
+          name?: string
+          phone?: string
+          relationship?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      emergency_events: {
+        Row: {
+          contacts_notified: string[] | null
+          created_at: string
+          emotional_state: string | null
+          id: string
+          location: Json | null
+          resolved: boolean | null
+          resolved_at: string | null
+          trigger_type: string
+          user_id: string
+        }
+        Insert: {
+          contacts_notified?: string[] | null
+          created_at?: string
+          emotional_state?: string | null
+          id?: string
+          location?: Json | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          trigger_type: string
+          user_id: string
+        }
+        Update: {
+          contacts_notified?: string[] | null
+          created_at?: string
+          emotional_state?: string | null
+          id?: string
+          location?: Json | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          trigger_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      journal_entries: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          sentiment_score: number | null
+          tags: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          sentiment_score?: number | null
+          tags?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          sentiment_score?: number | null
+          tags?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      mood_entries: {
+        Row: {
+          created_at: string
+          energy_level: number | null
+          id: string
+          mood_score: number
+          notes: string | null
+          stress_level: number | null
+          tags: string[] | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          energy_level?: number | null
+          id?: string
+          mood_score: number
+          notes?: string | null
+          stress_level?: number | null
+          tags?: string[] | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          energy_level?: number | null
+          id?: string
+          mood_score?: number
+          notes?: string | null
+          stress_level?: number | null
+          tags?: string[] | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      users_metadata: {
+        Row: {
+          created_at: string
+          emergency_contacts: Json
+          has_onboarded: boolean
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          emergency_contacts?: Json
+          has_onboarded?: boolean
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          emergency_contacts?: Json
+          has_onboarded?: boolean
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
