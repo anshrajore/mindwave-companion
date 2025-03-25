@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Phone, User, AtSign, Heart, Plus, Trash2, Save, AlertCircle } from 'lucide-react';
+import { useAuth } from '@/components/AuthProvider';
 
 type EmergencyContact = {
   id?: string;
@@ -14,39 +15,31 @@ type EmergencyContact = {
   phone: string;
   email: string;
   is_primary: boolean;
+  user_id?: string; // Add user_id to match Supabase table requirement
 };
 
 const EmergencyContactsForm = () => {
   const [contacts, setContacts] = useState<EmergencyContact[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [userLoggedIn, setUserLoggedIn] = useState(false);
+  const { user } = useAuth(); // Get the current user from AuthProvider
 
   useEffect(() => {
-    const checkUser = async () => {
-      const { data } = await supabase.auth.getSession();
-      setUserLoggedIn(!!data.session);
-      
-      if (data.session) {
-        fetchContacts();
+    if (user) {
+      fetchContacts();
+    } else {
+      // If no user logged in, add empty contact form if contacts is empty
+      if (contacts.length === 0) {
+        addContact();
       }
-    };
+    }
     
-    checkUser();
-    
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      setUserLoggedIn(!!session);
-      if (session) {
-        fetchContacts();
-      }
-    });
-    
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, []);
+    // No need to check auth state here as we're using the AuthProvider
+  }, [user]);
 
   const fetchContacts = async () => {
+    if (!user) return;
+    
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -79,6 +72,7 @@ const EmergencyContactsForm = () => {
         phone: '',
         email: '',
         is_primary: contacts.length === 0, // First contact is primary by default
+        user_id: user?.id, // Add user_id from the authenticated user
       },
     ]);
   };
@@ -136,7 +130,7 @@ const EmergencyContactsForm = () => {
   };
 
   const saveContacts = async () => {
-    if (!userLoggedIn) {
+    if (!user) {
       toast.error('Please log in to save emergency contacts');
       return;
     }
@@ -159,7 +153,7 @@ const EmergencyContactsForm = () => {
         const { id, ...contactData } = contact;
         const { error } = await supabase
           .from('emergency_contacts')
-          .update(contactData)
+          .update({ ...contactData, user_id: user.id })
           .eq('id', id);
           
         if (error) throw error;
@@ -168,9 +162,15 @@ const EmergencyContactsForm = () => {
       // Handle new contacts (insert)
       const newContacts = contacts.filter(contact => !contact.id);
       if (newContacts.length > 0) {
+        // Make sure all new contacts have the user_id
+        const contactsWithUserId = newContacts.map(contact => ({
+          ...contact,
+          user_id: user.id
+        }));
+        
         const { error } = await supabase
           .from('emergency_contacts')
-          .insert(newContacts);
+          .insert(contactsWithUserId);
           
         if (error) throw error;
       }

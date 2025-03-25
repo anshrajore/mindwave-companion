@@ -1,11 +1,11 @@
-
 import { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { CalendarIcon, Save, AlertCircle, Check } from 'lucide-react';
+import { CalendarIcon, Save, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { format, subDays } from 'date-fns';
+import { useAuth } from '@/components/AuthProvider';
 
 // Labels for mood scale
 const moodLabels = [
@@ -27,6 +27,7 @@ const getMoodColor = (value: number) => {
 
 const MoodTracker = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [selectedMetric, setSelectedMetric] = useState<'mood' | 'stress' | 'energy'>('mood');
   const [currentMood, setCurrentMood] = useState<number>(7);
   const [currentStress, setCurrentStress] = useState<number>(3);
@@ -34,77 +35,65 @@ const MoodTracker = () => {
   const [moodData, setMoodData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [savingMood, setSavingMood] = useState(false);
-  const [userLoggedIn, setUserLoggedIn] = useState(false);
 
-  // Check if user is logged in
+  // Check if user is logged in on component mount and auth state changes
   useEffect(() => {
-    const checkUser = async () => {
-      const { data } = await supabase.auth.getSession();
-      setUserLoggedIn(!!data.session);
-    };
-    
-    checkUser();
-    
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      setUserLoggedIn(!!session);
-    });
-    
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, []);
+    if (user) {
+      fetchMoodData();
+    } else {
+      // Use sample data if user is not logged in
+      const sampleData = generateSampleData();
+      setMoodData(sampleData);
+    }
+  }, [user]);
 
   // Fetch mood data from Supabase
-  useEffect(() => {
-    const fetchMoodData = async () => {
-      if (!userLoggedIn) {
-        // Use sample data if user is not logged in
-        const sampleData = generateSampleData();
-        setMoodData(sampleData);
-        return;
-      }
+  const fetchMoodData = async () => {
+    if (!user) {
+      // Use sample data if user is not logged in
+      const sampleData = generateSampleData();
+      setMoodData(sampleData);
+      return;
+    }
 
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('mood_entries')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(7);
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('mood_entries')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(7);
 
-        if (error) throw error;
+      if (error) throw error;
 
-        if (data && data.length > 0) {
-          const formattedData = data.map(entry => ({
-            day: format(new Date(entry.created_at), 'EEE'),
-            date: format(new Date(entry.created_at), 'MMM dd'),
-            mood: entry.mood_score,
-            stress: entry.stress_level,
-            energy: entry.energy_level,
-            id: entry.id
-          })).reverse();
-          
-          setMoodData(formattedData);
-        } else {
-          // Use sample data if no entries exist
-          setMoodData(generateSampleData());
-        }
-      } catch (error) {
-        console.error('Error fetching mood data:', error);
-        toast({
-          title: 'Error fetching mood data',
-          description: 'Please try again later.',
-          variant: 'destructive',
-        });
-        // Fallback to sample data
+      if (data && data.length > 0) {
+        const formattedData = data.map(entry => ({
+          day: format(new Date(entry.created_at), 'EEE'),
+          date: format(new Date(entry.created_at), 'MMM dd'),
+          mood: entry.mood_score,
+          stress: entry.stress_level,
+          energy: entry.energy_level,
+          id: entry.id
+        })).reverse();
+        
+        setMoodData(formattedData);
+      } else {
+        // Use sample data if no entries exist
         setMoodData(generateSampleData());
-      } finally {
-        setLoading(false);
       }
-    };
-
-    fetchMoodData();
-  }, [userLoggedIn, toast]);
+    } catch (error) {
+      console.error('Error fetching mood data:', error);
+      toast({
+        title: 'Error fetching mood data',
+        description: 'Please try again later.',
+        variant: 'destructive',
+      });
+      // Fallback to sample data
+      setMoodData(generateSampleData());
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Generate sample data for demonstration
   const generateSampleData = () => {
@@ -122,7 +111,7 @@ const MoodTracker = () => {
 
   // Save current mood to Supabase
   const saveMoodEntry = async () => {
-    if (!userLoggedIn) {
+    if (!user) {
       toast({
         title: 'Login required',
         description: 'Please log in to save your mood entries.',
@@ -137,10 +126,11 @@ const MoodTracker = () => {
         .from('mood_entries')
         .insert([
           {
+            user_id: user.id,
             mood_score: currentMood,
             stress_level: currentStress,
             energy_level: currentEnergy,
-          },
+          }
         ])
         .select();
 
@@ -383,16 +373,5 @@ const MoodTracker = () => {
             <div>
               <h4 className="font-medium mb-1">AI Insight</h4>
               <p className="text-sm text-muted-foreground">
-                {userLoggedIn ? 
-                  'Your mood has been improving steadily over the week. The decrease in stress levels suggests your coping strategies are working well.' 
-                  : 'Log in to receive personalized insights based on your mood patterns.'}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+                {user ?
 
-export default MoodTracker;
