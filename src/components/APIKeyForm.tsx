@@ -39,15 +39,17 @@ const APIKeyForm = ({ onSuccess }: APIKeyFormProps) => {
       if (!user) return;
       
       try {
+        // First, check if the column exists by getting metadata
         const { data, error } = await supabase
           .from('users_metadata')
-          .select('api_key_set')
+          .select('*')
           .eq('id', user.id)
           .single();
           
         if (error) throw error;
         
-        if (data && data.api_key_set) {
+        // Access api_key_set property safely
+        if (data && 'api_key_set' in data && data.api_key_set === true) {
           setIsApiKeySet(true);
         }
       } catch (error) {
@@ -74,7 +76,10 @@ const APIKeyForm = ({ onSuccess }: APIKeyFormProps) => {
       // We don't store the actual API key in the database for security reasons
       const { error } = await supabase
         .from('users_metadata')
-        .update({ api_key_set: true })
+        .update({ 
+          // Use a type assertion to allow this property
+          api_key_set: true 
+        } as any)
         .eq('id', user.id);
         
       if (error) throw error;
