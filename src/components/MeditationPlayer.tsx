@@ -79,6 +79,19 @@ const MeditationPlayer = () => {
     handleTrackChange(sampleTracks[nextIndex]);
   };
   
+  // Format time to display with leading zeros
+  const formatTimeWithLeadingZeros = (time: number): string => {
+    return time.toString().padStart(2, '0');
+  };
+  
+  // Calculate current minutes and seconds for display
+  const calculateCurrentTime = () => {
+    const totalSeconds = progress / 100 * parseFloat(currentTrack.duration.replace(':', '.')) * 60;
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = Math.floor(totalSeconds % 60);
+    return `${formatTimeWithLeadingZeros(minutes)}:${formatTimeWithLeadingZeros(seconds)}`;
+  };
+  
   return (
     <div className="rounded-xl shadow-sm border border-border overflow-hidden bg-card relative">
       {/* Visualizer background */}
@@ -110,8 +123,7 @@ const MeditationPlayer = () => {
           </div>
           <div className="flex justify-between text-xs text-muted-foreground mt-1">
             <span>
-              {Math.floor(progress / 100 * parseInt(currentTrack.duration.split(':')[0])):02}:
-              {Math.floor((progress / 100 * parseInt(currentTrack.duration.split(':')[1])) % 60):02}
+              {calculateCurrentTime()}
             </span>
             <span>{currentTrack.duration}</span>
           </div>
