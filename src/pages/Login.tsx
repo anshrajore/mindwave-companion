@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
@@ -8,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Sparkles, LogIn, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { signIn } from '@/services/auth';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 
 const formSchema = z.object({
@@ -42,11 +43,12 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      const result = await signIn(data.email, data.password);
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      });
       
-      if (!result.success) {
-        throw new Error(result.error?.message || "Failed to sign in");
-      }
+      if (error) throw error;
       
       toast.success("Login successful!");
       navigate('/dashboard');
@@ -55,6 +57,22 @@ const Login = () => {
       toast.error(error.message || "Failed to sign in");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
+      
+      if (error) throw error;
+    } catch (error: any) {
+      console.error("Google login error:", error);
+      toast.error(error.message || "Failed to sign in with Google");
     }
   };
 
@@ -149,7 +167,11 @@ const Login = () => {
               </div>
 
               <div className="mt-6">
-                <Button variant="outline" className="w-full">
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={handleGoogleSignIn}
+                >
                   <svg className="h-5 w-5 mr-2" aria-hidden="true" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12.0003 4.75C13.7703 4.75 15.3553 5.36002 16.6053 6.54998L20.0303 3.125C17.9502 1.19 15.2353 0 12.0003 0C7.31028 0 3.25527 2.69 1.28027 6.60998L5.27028 9.70498C6.21525 6.86002 8.87028 4.75 12.0003 4.75Z" fill="#EA4335"/>
                     <path d="M23.49 12.275C23.49 11.49 23.415 10.73 23.3 10H12V14.51H18.47C18.18 15.99 17.34 17.25 16.08 18.1L19.945 21.1C22.2 19.01 23.49 15.92 23.49 12.275Z" fill="#4285F4"/>

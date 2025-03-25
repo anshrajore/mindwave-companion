@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
@@ -7,40 +8,48 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { User, Home, BarChart4, BookOpen, BrainCircuit, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/components/AuthProvider';
+import { supabase } from '@/integrations/supabase/client';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { user, signOut } = useAuth();
   const [userName, setUserName] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [apiKey, setApiKey] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
-    // Check if user is logged in
-    const isLoggedIn = localStorage.getItem('isLoggedIn');
-    if (!isLoggedIn) {
-      navigate('/login');
-      return;
-    }
+    const checkUserAndApiKey = async () => {
+      if (!user) {
+        navigate('/login');
+        return;
+      }
+      
+      // Get the API key from localStorage if it exists
+      const storedApiKey = localStorage.getItem('mindwave_api_key');
+      setApiKey(storedApiKey);
+      
+      // Set user email from Supabase auth
+      setUserEmail(user.email);
+      
+      // Get user's full name from Supabase auth metadata
+      const fullName = user.user_metadata?.full_name || 'User';
+      setUserName(fullName);
+      
+      setIsLoading(false);
+    };
     
-    // Get user data
-    const storedName = localStorage.getItem('userName');
-    const storedEmail = localStorage.getItem('userEmail');
-    const storedApiKey = localStorage.getItem('mindwave_api_key');
-    
-    setUserName(storedName);
-    setUserEmail(storedEmail);
-    setApiKey(storedApiKey);
-  }, [navigate]);
+    checkUserAndApiKey();
+  }, [user, navigate]);
   
-  const handleLogout = () => {
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('userName');
-    localStorage.removeItem('userEmail');
-    // Note: We're keeping the API key for convenience
-    
-    toast.success("Successfully logged out");
-    navigate('/');
-  };
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-mindwave-600"></div>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -79,7 +88,7 @@ const Dashboard = () => {
                         <BarChart4 className="h-4 w-4 mr-2" />
                         Mood Tracker
                       </Button>
-                      <Button variant="destructive" className="w-full justify-start" onClick={handleLogout}>
+                      <Button variant="destructive" className="w-full justify-start" onClick={signOut}>
                         <LogOut className="h-4 w-4 mr-2" />
                         Logout
                       </Button>
