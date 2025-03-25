@@ -1,6 +1,8 @@
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, User, Bot, Sparkles, MicIcon, XCircle } from 'lucide-react';
+import { Send, User, Bot, Sparkles, Mic, MicOff, XCircle } from 'lucide-react';
+import { toast } from 'sonner';
+import APIKeyForm from './APIKeyForm';
 
 interface Message {
   id: string;
@@ -21,7 +23,10 @@ const ChatInterface = () => {
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [apiKey, setApiKey] = useState<string | null>(null);
+  const [showApiKeyForm, setShowApiKeyForm] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   // Sample AI responses for demo
   const aiResponses = [
@@ -35,6 +40,15 @@ const ChatInterface = () => {
     "Let's try a quick breathing exercise. Take a deep breath in for 4 counts, hold for 7, and exhale for 8."
   ];
 
+  // Check if API key is stored on component mount
+  useEffect(() => {
+    const storedApiKey = localStorage.getItem('mindwave_api_key');
+    if (storedApiKey) {
+      setApiKey(storedApiKey);
+    }
+  }, []);
+
+  // Scrolls to the bottom of the chat
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -43,6 +57,7 @@ const ChatInterface = () => {
     scrollToBottom();
   }, [messages]);
 
+  // Handle send message function
   const handleSendMessage = async () => {
     if (!input.trim()) return;
     
@@ -70,25 +85,144 @@ const ChatInterface = () => {
       
       setMessages((prev) => [...prev, aiMessage]);
       setIsTyping(false);
+      
+      // Use speech synthesis to read the AI response aloud
+      speakText(randomResponse);
     }, 1500);
   };
 
+  // Voice recognition setup
+  const setupSpeechRecognition = () => {
+    if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+      toast.error("Speech recognition is not supported in your browser");
+      return false;
+    }
+    
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+    
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results)
+        .map(result => result[0])
+        .map(result => result.transcript)
+        .join('');
+      
+      setInput(transcript);
+    };
+    
+    recognition.onerror = (event) => {
+      console.error('Speech recognition error', event.error);
+      toast.error(`Speech recognition error: ${event.error}`);
+      setIsRecording(false);
+    };
+    
+    recognitionRef.current = recognition;
+    return true;
+  };
+
+  // Toggle voice recording
   const toggleRecording = () => {
-    setIsRecording(!isRecording);
-    // In a real app, this would handle speech-to-text functionality
+    if (!apiKey) {
+      setShowApiKeyForm(true);
+      return;
+    }
+    
+    if (isRecording) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+        setIsRecording(false);
+      }
+    } else {
+      const isSetup = setupSpeechRecognition();
+      if (isSetup && recognitionRef.current) {
+        recognitionRef.current.start();
+        setIsRecording(true);
+        toast.success("Listening... Speak now");
+      }
+    }
+  };
+
+  // Use speech synthesis to speak text
+  const speakText = (text: string) => {
+    if (!apiKey) return;
+    
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+      
+      // Get available voices
+      const voices = window.speechSynthesis.getVoices();
+      
+      // Try to find a female voice
+      const femaleVoice = voices.find(voice => 
+        voice.name.includes('female') || 
+        voice.name.includes('Samantha') || 
+        voice.name.includes('Google UK English Female')
+      );
+      
+      if (femaleVoice) {
+        utterance.voice = femaleVoice;
+      }
+      
+      window.speechSynthesis.speak(utterance);
+    } else {
+      console.warn("Text-to-speech not supported in this browser");
+    }
+  };
+
+  // Handle API key set
+  const handleApiKeySet = (key: string) => {
+    setApiKey(key);
+    setShowApiKeyForm(false);
+    toast.success("Voice features are now enabled!");
   };
 
   return (
     <div className="h-full flex flex-col rounded-xl shadow-sm border border-border overflow-hidden bg-card relative">
+      {/* API Key Form Modal */}
+      {showApiKeyForm && (
+        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex items-center justify-center p-4">
+          <div className="max-w-md w-full">
+            <APIKeyForm onSuccess={handleApiKeySet} />
+            <Button 
+              variant="ghost" 
+              className="mt-4 mx-auto block" 
+              onClick={() => setShowApiKeyForm(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+      
       {/* Chat header */}
-      <div className="p-4 border-b border-border flex items-center">
-        <div className="w-10 h-10 rounded-full bg-mindwave-100 flex items-center justify-center">
-          <Sparkles className="h-5 w-5 text-mindwave-600" />
+      <div className="p-4 border-b border-border flex items-center justify-between">
+        <div className="flex items-center">
+          <div className="w-10 h-10 rounded-full bg-mindwave-100 flex items-center justify-center">
+            <Sparkles className="h-5 w-5 text-mindwave-600" />
+          </div>
+          <div className="ml-3">
+            <h3 className="font-medium">MindWave AI</h3>
+            <p className="text-xs text-muted-foreground">Your mental health companion</p>
+          </div>
         </div>
-        <div className="ml-3">
-          <h3 className="font-medium">MindWave AI</h3>
-          <p className="text-xs text-muted-foreground">Your mental health companion</p>
-        </div>
+        
+        {!apiKey && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setShowApiKeyForm(true)}
+          >
+            <Key className="h-4 w-4 mr-2" />
+            Set API Key
+          </Button>
+        )}
       </div>
       
       {/* Messages area */}
@@ -151,7 +285,7 @@ const ChatInterface = () => {
               : 'hover:bg-muted'
             }`}
           >
-            {isRecording ? <XCircle className="h-5 w-5" /> : <MicIcon className="h-5 w-5" />}
+            {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
           </button>
           
           <input
@@ -159,7 +293,7 @@ const ChatInterface = () => {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-            placeholder="Type your message..."
+            placeholder={isRecording ? "Listening..." : "Type your message..."}
             className="flex-1 p-3 rounded-full border border-input bg-background focus:outline-none focus:ring-2 focus:ring-mindwave-500 transition-all"
           />
           

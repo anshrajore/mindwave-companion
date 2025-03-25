@@ -9,6 +9,9 @@ import Chat from "./pages/Chat";
 import Journal from "./pages/Journal";
 import Meditate from "./pages/Meditate";
 import Mood from "./pages/Mood";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,6 +28,9 @@ const App = () => (
           <Route path="/journal" element={<Journal />} />
           <Route path="/meditate" element={<Meditate />} />
           <Route path="/mood" element={<Mood />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
