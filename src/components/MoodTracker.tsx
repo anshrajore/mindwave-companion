@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { CalendarIcon, Save, AlertCircle } from 'lucide-react';
@@ -373,5 +374,16 @@ const MoodTracker = () => {
             <div>
               <h4 className="font-medium mb-1">AI Insight</h4>
               <p className="text-sm text-muted-foreground">
-                {user ?
+                {user ? 
+                  "Your mood has been improving throughout the week. Keep up with your regular exercise routine and mindfulness practice." 
+                  : "Please log in to receive personalized AI insights based on your mood tracking data."}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
+export default MoodTracker;
