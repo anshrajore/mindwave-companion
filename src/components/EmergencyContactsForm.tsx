@@ -1,9 +1,11 @@
-// src/components/EmergencyContactsForm.tsx
+
 import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/components/AuthProvider';
 
 interface EmergencyContact {
   name: string;
@@ -21,6 +23,7 @@ const EmergencyContactsForm: React.FC<EmergencyContactsFormProps> = ({ isLoggedI
     { name: '', relationship: '', phone: '' },
   ]);
   const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();
 
   const addContact = () => {
     setContacts([...contacts, { name: '', relationship: '', phone: '' }]);
@@ -41,15 +44,42 @@ const EmergencyContactsForm: React.FC<EmergencyContactsFormProps> = ({ isLoggedI
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     
-    if (!isLoggedIn) {
+    if (!isLoggedIn || !user) {
       toast.error("Please log in to save emergency contacts");
       return;
     }
 
     setIsLoading(true);
     try {
-      // Simulate API call or data processing
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // First delete existing contacts
+      const { error: deleteError } = await supabase
+        .from('emergency_contacts')
+        .delete()
+        .eq('user_id', user.id);
+        
+      if (deleteError) {
+        throw deleteError;
+      }
+      
+      // Add new contacts
+      const contactsWithUserId = contacts.map(contact => ({
+        ...contact,
+        user_id: user.id,
+        is_primary: false
+      }));
+      
+      // Set the first contact as primary
+      if (contactsWithUserId.length > 0) {
+        contactsWithUserId[0].is_primary = true;
+      }
+      
+      const { error: insertError } = await supabase
+        .from('emergency_contacts')
+        .insert(contactsWithUserId);
+        
+      if (insertError) {
+        throw insertError;
+      }
 
       onSave(contacts);
       toast.success("Emergency contacts saved successfully!");

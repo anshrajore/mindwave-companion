@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Key, Check } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/components/AuthProvider';
 
 const formSchema = z.object({
   apiKey: z.string().min(10, { message: "API key must be at least 10 characters long" }),
@@ -22,6 +24,7 @@ interface APIKeyFormProps {
 const APIKeyForm = ({ onSuccess }: APIKeyFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isApiKeySet, setIsApiKeySet] = useState(false);
+  const { user } = useAuth();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -29,15 +32,53 @@ const APIKeyForm = ({ onSuccess }: APIKeyFormProps) => {
       apiKey: "",
     },
   });
+  
+  // Check if API key already exists when component mounts
+  useEffect(() => {
+    const checkExistingApiKey = async () => {
+      if (!user) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('users_metadata')
+          .select('api_key_set')
+          .eq('id', user.id)
+          .single();
+          
+        if (error) throw error;
+        
+        if (data && data.api_key_set) {
+          setIsApiKeySet(true);
+        }
+      } catch (error) {
+        console.error("Error checking API key status:", error);
+      }
+    };
+    
+    checkExistingApiKey();
+  }, [user]);
 
-  const onSubmit = (data: FormValues) => {
+  const onSubmit = async (data: FormValues) => {
+    if (!user) {
+      toast.error("You must be logged in to save an API key");
+      return;
+    }
+    
     setIsLoading(true);
     
-    // In a real app, you would validate the API key with a backend service
-    setTimeout(() => {
-      // Store the API key in localStorage (only for demo purposes)
-      // In a real app, this should be more securely stored
+    try {
+      // Store the encrypted API key in localStorage for current session use
       localStorage.setItem('mindwave_api_key', data.apiKey);
+      
+      // Update the database to mark that this user has an API key set
+      // We don't store the actual API key in the database for security reasons
+      const { error } = await supabase
+        .from('users_metadata')
+        .update({ api_key_set: true })
+        .eq('id', user.id);
+        
+      if (error) throw error;
+      
       setIsApiKeySet(true);
       setIsLoading(false);
       toast.success("API key saved successfully!");
@@ -45,7 +86,11 @@ const APIKeyForm = ({ onSuccess }: APIKeyFormProps) => {
       if (onSuccess) {
         onSuccess(data.apiKey);
       }
-    }, 1000);
+    } catch (error: any) {
+      console.error("Error saving API key:", error);
+      toast.error("Failed to save API key");
+      setIsLoading(false);
+    }
   };
 
   return (

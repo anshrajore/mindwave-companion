@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -9,7 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Sparkles, UserPlus, AlertCircle, Phone, Heart } from 'lucide-react';
 import { toast } from 'sonner';
+import { signUp } from '@/services/auth';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/components/AuthProvider';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
@@ -29,6 +31,14 @@ type FormValues = z.infer<typeof formSchema>;
 const Signup = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();
+
+  // Check if user is already logged in
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -48,19 +58,15 @@ const Signup = () => {
     
     try {
       // Sign up the user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: {
-          data: {
-            full_name: data.name,
-          },
-        },
-      });
+      const result = await signUp(data.email, data.password, data.name);
 
-      if (authError) throw authError;
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to create account");
+      }
       
-      if (!authData.user) {
+      const userId = result.data?.user?.id;
+      
+      if (!userId) {
         throw new Error("Failed to create user account");
       }
       
@@ -69,7 +75,7 @@ const Signup = () => {
         .from('emergency_contacts')
         .insert([
           {
-            user_id: authData.user.id,
+            user_id: userId,
             name: data.emergencyContactName,
             relationship: data.emergencyContactRelationship,
             phone: data.emergencyContactPhone,
@@ -77,17 +83,13 @@ const Signup = () => {
           },
         ]);
 
-      if (contactError) throw contactError;
+      if (contactError) {
+        console.error("Error creating emergency contact:", contactError);
+        toast.error("Account created but failed to save emergency contact.");
+      } else {
+        toast.success("Account created successfully!");
+      }
       
-      // Update user metadata
-      const { error: metadataError } = await supabase
-        .from('users_metadata')
-        .update({ has_onboarded: true })
-        .eq('id', authData.user.id);
-
-      if (metadataError) throw metadataError;
-      
-      toast.success("Account created successfully!");
       navigate('/dashboard');
     } catch (error: any) {
       console.error("Signup error:", error);
