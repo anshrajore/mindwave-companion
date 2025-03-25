@@ -1,8 +1,8 @@
-
 import { useState, useRef, useEffect } from 'react';
-import { Send, User, Bot, Sparkles, Mic, MicOff, XCircle } from 'lucide-react';
+import { Send, User, Bot, Sparkles, Mic, MicOff, XCircle, Key } from 'lucide-react';
 import { toast } from 'sonner';
 import APIKeyForm from './APIKeyForm';
+import { Button } from '@/components/ui/button';
 
 interface Message {
   id: string;
@@ -28,7 +28,6 @@ const ChatInterface = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
-  // Sample AI responses for demo
   const aiResponses = [
     "I understand that can be challenging. Would you like to explore some coping strategies?",
     "Thank you for sharing that with me. How long have you been feeling this way?",
@@ -40,7 +39,6 @@ const ChatInterface = () => {
     "Let's try a quick breathing exercise. Take a deep breath in for 4 counts, hold for 7, and exhale for 8."
   ];
 
-  // Check if API key is stored on component mount
   useEffect(() => {
     const storedApiKey = localStorage.getItem('mindwave_api_key');
     if (storedApiKey) {
@@ -48,7 +46,6 @@ const ChatInterface = () => {
     }
   }, []);
 
-  // Scrolls to the bottom of the chat
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -57,11 +54,9 @@ const ChatInterface = () => {
     scrollToBottom();
   }, [messages]);
 
-  // Handle send message function
   const handleSendMessage = async () => {
     if (!input.trim()) return;
     
-    // Add user message
     const userMessage: Message = {
       id: Date.now().toString(),
       text: input,
@@ -73,7 +68,6 @@ const ChatInterface = () => {
     setInput('');
     setIsTyping(true);
     
-    // Simulate AI thinking and responding
     setTimeout(() => {
       const randomResponse = aiResponses[Math.floor(Math.random() * aiResponses.length)];
       const aiMessage: Message = {
@@ -86,12 +80,10 @@ const ChatInterface = () => {
       setMessages((prev) => [...prev, aiMessage]);
       setIsTyping(false);
       
-      // Use speech synthesis to read the AI response aloud
       speakText(randomResponse);
     }, 1500);
   };
 
-  // Voice recognition setup
   const setupSpeechRecognition = () => {
     if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
       toast.error("Speech recognition is not supported in your browser");
@@ -124,7 +116,6 @@ const ChatInterface = () => {
     return true;
   };
 
-  // Toggle voice recording
   const toggleRecording = () => {
     if (!apiKey) {
       setShowApiKeyForm(true);
@@ -146,7 +137,6 @@ const ChatInterface = () => {
     }
   };
 
-  // Use speech synthesis to speak text
   const speakText = (text: string) => {
     if (!apiKey) return;
     
@@ -156,10 +146,8 @@ const ChatInterface = () => {
       utterance.pitch = 1;
       utterance.volume = 1;
       
-      // Get available voices
       const voices = window.speechSynthesis.getVoices();
       
-      // Try to find a female voice
       const femaleVoice = voices.find(voice => 
         voice.name.includes('female') || 
         voice.name.includes('Samantha') || 
@@ -176,7 +164,6 @@ const ChatInterface = () => {
     }
   };
 
-  // Handle API key set
   const handleApiKeySet = (key: string) => {
     setApiKey(key);
     setShowApiKeyForm(false);
@@ -185,7 +172,6 @@ const ChatInterface = () => {
 
   return (
     <div className="h-full flex flex-col rounded-xl shadow-sm border border-border overflow-hidden bg-card relative">
-      {/* API Key Form Modal */}
       {showApiKeyForm && (
         <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex items-center justify-center p-4">
           <div className="max-w-md w-full">
@@ -201,7 +187,6 @@ const ChatInterface = () => {
         </div>
       )}
       
-      {/* Chat header */}
       <div className="p-4 border-b border-border flex items-center justify-between">
         <div className="flex items-center">
           <div className="w-10 h-10 rounded-full bg-mindwave-100 flex items-center justify-center">
@@ -225,7 +210,6 @@ const ChatInterface = () => {
         )}
       </div>
       
-      {/* Messages area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => (
           <div key={message.id} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -274,7 +258,6 @@ const ChatInterface = () => {
         <div ref={messagesEndRef} />
       </div>
       
-      {/* Input area */}
       <div className="p-4 border-t border-border">
         <div className="relative flex items-center">
           <button 
