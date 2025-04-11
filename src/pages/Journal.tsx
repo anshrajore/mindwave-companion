@@ -41,7 +41,7 @@ const Journal = () => {
                   {Array.from({ length: 30 }).map((_, index) => {
                     // Randomly assign some days as having entries
                     const hasEntry = Math.random() > 0.6;
-                    const isCurrent = index === 15;
+                    const isCurrent = index === 24;
                     
                     return (
                       <button 
@@ -63,11 +63,11 @@ const Journal = () => {
                 <div className="flex justify-between items-center text-sm">
                   <button className="flex items-center text-muted-foreground hover:text-foreground transition-colors">
                     <ArrowLeft className="h-4 w-4 mr-1" />
-                    <span>April</span>
+                    <span>Feb</span>
                   </button>
-                  <span className="font-medium">May 2023</span>
+                  <span className="font-medium">March 2025</span>
                   <button className="flex items-center text-muted-foreground hover:text-foreground transition-colors">
-                    <span>June</span>
+                    <span>April</span>
                     <ArrowRight className="h-4 w-4 ml-1" />
                   </button>
                 </div>
