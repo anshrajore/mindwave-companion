@@ -1,10 +1,34 @@
-
+import { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import JournalEntry from '../components/JournalEntry';
 import Footer from '../components/Footer';
 import { Book, Calendar, Clock, ArrowLeft, ArrowRight } from 'lucide-react';
 
 const Journal = () => {
+  const [entries, setEntries] = useState([]); // Store journal entries
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredEntries, setFilteredEntries] = useState([]);
+
+  useEffect(() => {
+    // Fetch entries from a database or local storage
+    const fetchEntries = async () => {
+      const fetchedEntries = await getJournalEntries();
+      setEntries(fetchedEntries);
+      setFilteredEntries(fetchedEntries);
+    };
+
+    fetchEntries();
+  }, []);
+
+  const handleSearch = (e) => {
+    const term = e.target.value;
+    setSearchTerm(term);
+    setFilteredEntries(entries.filter(entry => entry.text.includes(term)));
+  };
+
+  // Get the most recent entry
+  const recentEntry = filteredEntries[0];
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
@@ -17,7 +41,16 @@ const Journal = () => {
                 Write about your thoughts and feelings to track your emotional wellbeing.
               </p>
               
-              <JournalEntry />
+              <input
+                type="text"
+                placeholder="Search entries..."
+                value={searchTerm}
+                onChange={handleSearch}
+                className="mb-4 p-2 border border-gray-300 rounded"
+              />
+              
+              {/* Render only the most recent journal entry */}
+              {recentEntry && <JournalEntry key={recentEntry.id} entry={recentEntry} />}
             </div>
             
             <div className="space-y-6">
@@ -119,20 +152,12 @@ const Journal = () => {
                 </h3>
                 
                 <div className="space-y-3">
-                  {['Yesterday', '2 days ago', '4 days ago'].map((day, index) => (
+                  {filteredEntries.slice(1, 4).map((entry, index) => (
                     <div key={index} className="flex items-center p-2 rounded-lg hover:bg-muted transition-colors cursor-pointer">
-                      <div className={`w-3 h-3 rounded-full mr-3 ${
-                        index === 0 ? 'bg-green-500' : index === 1 ? 'bg-amber-500' : 'bg-red-500'
-                      }`} />
+                      <div className={`w-3 h-3 rounded-full mr-3 ${entry.mood === 'positive' ? 'bg-green-500' : entry.mood === 'neutral' ? 'bg-amber-500' : 'bg-red-500'}`} />
                       <div>
-                        <p className="text-sm font-medium">{day}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {index === 0 
-                            ? 'Feeling grateful today...' 
-                            : index === 1 
-                              ? 'Mixed emotions about work...' 
-                              : 'Struggling with anxiety...'}
-                        </p>
+                        <p className="text-sm font-medium">{entry.date}</p>
+                        <p className="text-xs text-muted-foreground">{entry.text}</p>
                       </div>
                     </div>
                   ))}
@@ -148,3 +173,13 @@ const Journal = () => {
 };
 
 export default Journal;
+
+// Mock function to simulate fetching journal entries
+const getJournalEntries = async () => {
+  return [
+    { id: '1', text: 'Today was a good day!', mood: 'positive', date: 'March 1, 2025' },
+    { id: '2', text: 'I felt stressed about work.', mood: 'negative', date: 'February 28, 2025' },
+    { id: '3', text: 'Had a great time with friends.', mood: 'positive', date: 'February 27, 2025' },
+    // Add more entries as needed
+  ];
+};
